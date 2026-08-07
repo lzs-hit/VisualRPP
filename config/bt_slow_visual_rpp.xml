@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="3"
+      main_tree_to_execute="MainTree">
+  <include path="/root/ros2_ws/install/nav_pkg/share/nav_pkg/config/navigate_to_pose.xml"/>
+
+  <include path="/root/ros2_ws/install/nav_pkg/share/nav_pkg/config/navigate_through_poses.xml"/>
+
+  <BehaviorTree ID="MainTree">
+    <Sequence name="NavigationSequence">
+      <InitializeMultiGoals point_a="{point_a}"
+                            point_b="{point_b}"
+                            point_c="{point_c}"
+                            goals_left="{goals_left}"
+                            goals_right_first="{goals_right_first}"
+                            goals_right_second="{goals_right_second}"
+                            goals_left_second="{goals_left_second}"
+                            goals_left_first="{goals_left_first}"
+                            bback="{bback}"/>
+      <ReactiveFallback name="NavigateToB">
+        <Sequence name="PreemptCheck">
+          <IsHalf threshold="1.5"/>
+          <IsQRCodeReceived direction="{direction}"/>
+        </Sequence>
+        <Sequence>
+          <Sequence name="NavigateB">
+            <SetBlackboard value="{goal}"            output_key="goal"/>
+            <SetBlackboard value="GridBased"            output_key="planner_id"/>
+            <SetBlackboard value="VisualRPP"                output_key="controller_id"/>
+            <SetBlackboard value="goal_checker" output_key="goal_checker_id"/>
+            <SubTree ID="NavigateToPoseSubtree" __shared_blackboard="true"/>
+          </Sequence>
+          <Sequence name="NavigateB">
+            <SetBlackboard value="{point_b}"            output_key="goal"/>
+            <SetBlackboard value="GridBased"            output_key="planner_id"/>
+            <SetBlackboard value="VisualRPP"                output_key="controller_id"/>
+            <SetBlackboard value="precise_goal_checker" output_key="goal_checker_id"/>
+            <SubTree ID="NavigateToPoseSubtree" __shared_blackboard="true"/>
+          </Sequence>
+        </Sequence>
+      </ReactiveFallback>
+      <SetBlackboard value="goal_checker"
+                     output_key="goal_checker_id"/>
+      <AckermannCurveBackup backup_speed="1.0"
+                      min_R="0.25"
+                      target_angle_deg="15.0"
+                      ramp_time="0.5"
+                      min_obstacle_distance="0.05"
+                      cost_threshold="95"
+                      clockwise="false"/>
+      <Switch2 case_1="left"
+               case_2="right"
+               variable="{direction}">
+        <Sequence>
+          <SetBlackboard value="GridBased"
+                         output_key="planner_id"/>
+          <SetBlackboard value="VisualRPP"
+                         output_key="controller_id"/>
+          <SetBlackboard value="{goals_left_first}"
+                         output_key="goals"/>
+          <SetBlackboard value="left"
+                         output_key="direction"/>
+          <SubTree ID="NavigateThroughPosesSubtree"
+                   goals="goals_left"
+                   direction="left"
+                   __shared_blackboard="true"/>
+          <ForceSuccess>
+              <IsOpen direction="{direction}"/>
+          </ForceSuccess>
+          <SetBlackboard value="{goals_left_second}"
+                         output_key="goals"/>
+          <SubTree ID="NavigateThroughPosesSubtree"
+                   goals="goals_right"
+                   direction="right"
+                   __shared_blackboard="true"/>
+        </Sequence>
+        <Sequence>
+          <SetBlackboard value="GridBased"
+                         output_key="planner_id"/>
+          <SetBlackboard value="VisualRPP"
+                         output_key="controller_id"/>
+          <SetBlackboard value="{goals_right_first}"
+                         output_key="goals"/>
+          <SetBlackboard value="right"
+                         output_key="direction"/>
+          <SubTree ID="NavigateThroughPosesSubtree"
+                   goals="goals_right"
+                   direction="right"
+                   __shared_blackboard="true"/>
+          <ForceSuccess>
+              <IsOpen direction="{direction}"/>
+          </ForceSuccess>
+          <SetBlackboard value="{goals_right_second}"
+                         output_key="goals"/>
+          <SubTree ID="NavigateThroughPosesSubtree"
+                   goals="goals_right"
+                   direction="right"
+                   __shared_blackboard="true"/>
+        </Sequence>
+        <Sequence>
+          <SetBlackboard value="GridBased"
+                         output_key="planner_id"/>
+          <SetBlackboard value="VisualRPP"
+                         output_key="controller_id"/>
+          <SetBlackboard value="{goals_right}"
+                         output_key="goals"/>
+          <SetBlackboard value="right"
+                         output_key="direction"/>
+          <SetBlackboard value="0.0001"
+                         output_key="planner_hz"/>
+          <SubTree ID="NavigateThroughPosesSubtree"
+                   goals="goals_right"
+                   direction="right"
+                   __shared_blackboard="true"/>
+        </Sequence>
+      </Switch2>
+      <!-- <Sequence>
+        <SetBlackboard value="GridBased"
+                       output_key="planner_id"/>
+        <SetBlackboard value="VisualRPP"
+                       output_key="controller_id"/>
+        <SetBlackboard value="goal_checker"
+                       output_key="goal_checker_id"/>
+        <SetBlackboard value="{point_a}"
+                       output_key="goal"/>
+        <SubTree ID="NavigateToPoseSubtree"
+                 goal="{point_a}"
+                 __shared_blackboard="true"/>
+      </Sequence> -->
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="InitializeMultiGoals"
+            editable="true">
+      <output_port name="point_a"
+                   type="geometry_msgs::msg::PoseStamped"/>
+      <output_port name="point_b"
+                   type="geometry_msgs::msg::PoseStamped"/>
+      <output_port name="point_c"
+                   type="geometry_msgs::msg::PoseStamped"/>
+      <output_port name="goals_left"
+                   type="std::vector&lt;geometry_msgs::msg::PoseStamped&gt;"/>
+      <output_port name="goals_right"
+                   type="std::vector&lt;geometry_msgs::msg::PoseStamped&gt;"/>
+      <output_port name="bback"
+                   type="geometry_msgs::msg::PoseStamped"/>
+    </Action>
+    <Condition ID="IsHalf"
+               editable="true">
+      <input_port name="threshold"
+                  type="double"/>
+    </Condition>
+    <Condition ID="IsQRCodeReceived"
+               editable="true">
+      <output_port name="direction"
+                   type="std::string"/>
+    </Condition>
+  </TreeNodesModel>
+
+</root>
