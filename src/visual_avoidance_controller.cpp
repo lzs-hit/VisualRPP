@@ -254,7 +254,7 @@ geometry_msgs::msg::TwistStamped VisualAvoidanceController::computeAvoidanceComm
   //   Forward  (+x)  -> bearing = 0    -> omega = 0
   //   Left     (+y)  -> bearing > 0    -> omega > 0  (turn left)
   //   Right    (-y)  -> bearing < 0    -> omega < 0  (turn right)
-  const double bearing = std::atan2(current_target_.y, current_target_.x);
+  const double bearing = -std::atan2(current_target_.x, current_target_.y);
   const double K = avoidance_steering_gain_;        // proportional gain for avoidance steering
   double omega = K * bearing;
   omega = std::clamp(omega, -max_angular_vel_, max_angular_vel_);
@@ -351,20 +351,32 @@ geometry_msgs::msg::TwistStamped VisualAvoidanceController::computeVelocityComma
       }
       break;
 
-    case State::AVOIDING:
-      if (!have_obstacle || !inConeZone(nearest)) {
+    case State::AVOIDING: {
+      // RECOVERY when bearing to target is small AND min time elapsed
+      double bearing_to_target = std::abs(std::atan2(current_target_.y, current_target_.x));
+      bool reached = (bearing_to_target < avoidance_reach_threshold_)
+                  && ((now - avoidance_start_time_).seconds() > avoidance_min_duration_);
+      if (reached || !have_obstacle || !inConeZone(nearest)) {
         state_ = State::RECOVERY;
         recovery_start_time_ = now;
         last_avoidance_end_time_ = now;
+        if (avoidance_angle_count_ > 0) {
+          double avg = avoidance_angle_sum_ / avoidance_angle_count_;
+          return_target_angle_ = -(turn_left_ ? return_line_gain_left_ : return_line_gain_right_) * avg;
+        }
         RCLCPP_INFO_THROTTLE(
           node->get_logger(), *clock_, 500,
-          "[VisualAvoidance] AVOIDING -> RECOVERY (cone cleared)");
+          "[VisualAvoidance] AVOIDING -> RECOVERY (%s)",
+          reached ? "target reached" : "cone cleared");
       } else {
         if (turn_left_) {
           current_target_ = computeAvoidanceTarget(nearest);
         } else {
           current_target_ = computeAvoidanceTargetRight(nearest);
         }
+        avoidance_angle_sum_ += std::atan2(current_target_.y, current_target_.x);
+        avoidance_angle_count_++;
+      }
       }
       break;
 
@@ -417,7 +429,10 @@ geometry_msgs::msg::TwistStamped VisualAvoidanceController::computeVelocityComma
       auto cmd = RegulatedPurePursuitController::computeVelocityCommands(
         pose, velocity, goal_checker);
       cmd.twist.linear.x *= recovery_speed_ratio_;
-      cmd.twist.angular.z *= recovery_steering_boost_;
+      double t = (now - recovery_start_time_).seconds();
+      double blend = (recovery_duration_ > 0) ? std::max(0.0, 1.0 - t / recovery_duration_) : 0.0;
+      cmd.twist.angular.z = (1.0 - blend) * cmd.twist.angular.z * recovery_steering_boost_
+                          + blend * return_target_angle_ * 2.0;
       return cmd;
     }
   }

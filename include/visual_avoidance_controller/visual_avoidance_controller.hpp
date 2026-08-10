@@ -116,10 +116,19 @@ private:
   double avoidance_steering_gain_;  // P-gain for avoidance bearing (default 2.0)
   double path_bias_weight_;        // RPP path bias during AVOIDING (default 0.3)
   double avoidance_cooldown_duration_;  // cooldown after avoidance (s, default 0.5)
+  double avoidance_reach_threshold_;
+  double avoidance_min_duration_;
+  double target_y_forward_offset_;
   double recovery_speed_ratio_;     // speed multiplier in RECOVERY (default 0.5)
   double recovery_steering_boost_; // steering amplification during RECOVERY (default 1.5)
   double near_threshold_distance_;  // r < this uses bigR else R (default 0.6)
   double right_turn_radius_scale_;  // right-turn radius scaling (default 0.8)
+  double avoidance_min_lateral_offset_;
+  double return_line_gain_left_;
+  double return_line_gain_right_;
+  double avoidance_angle_sum_;
+  int    avoidance_angle_count_;
+  double return_target_angle_;
   bool   enable_visual_avoidance_;
 
   // Cached state across ticks (avoids allocation in hot path).
@@ -128,6 +137,7 @@ private:
 
   State state_;
   ObstaclePoint current_target_;
+  rclcpp::Time avoidance_start_time_;
   rclcpp::Time recovery_start_time_;
   rclcpp::Time last_avoidance_end_time_;  // when last AVOIDING->RECOVERY transition happened
 
