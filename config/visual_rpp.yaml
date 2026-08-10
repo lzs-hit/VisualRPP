@@ -127,7 +127,7 @@ controller_server:
     VisualRPP:
       plugin: "visual_avoidance_controller::VisualAvoidanceController"
       # ===== RPP基础参数（来自rpp.yaml）=====
-      desired_linear_vel: 0.7
+      desired_linear_vel: 1.0
       lookahead_dist: 0.4
       min_lookahead_dist: 0.6
       max_lookahead_dist: 1.2
@@ -149,28 +149,28 @@ controller_server:
       cone_zone_a: 75.0
       cone_zone_b: 20.0
       cone_zone_c: 25.0
-      avoid_R: 0.45
-      avoid_bigR: 0.55
+      avoid_R: 0.35
+      avoid_bigR: 0.45
       near_threshold_distance: 0.6
       right_turn_radius_scale:   1.0
       avoidance_min_lateral_offset: 0.25
-      return_line_gain_left:      2.0
+      return_line_gain_left:      3.0
       return_line_gain_right:     3.0
       avoidance_reach_threshold:   0.15
       avoidance_min_duration:     0.3
       target_y_forward_offset:     0.3
-      y_threshold: 0.7
-      offset_x_first_half: 0.05
-      offset_x_second_half: 0.05
+      y_threshold: 0.5
+      offset_x_first_half: 0.0
+      offset_x_second_half: 0.0
       half_transition_distance: 3.0
       recovery_duration: 1.2
       avoid_linear_vel: 0.4
       max_angular_vel: 4.0
-      avoidance_steering_gain: 8.0
+      avoidance_steering_gain: 5.0
       path_bias_weight: 0.6
       avoidance_cooldown_duration: 0.0
       recovery_speed_ratio: 0.5
-      recovery_steering_boost: 8.0
+      recovery_steering_boost: 4.0
       enable_visual_avoidance: true
 
     goal_checker:
