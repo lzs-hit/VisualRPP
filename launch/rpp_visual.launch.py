@@ -105,7 +105,7 @@ def generate_launch_description():
 
     declare_yolo_workconfig = DeclareLaunchArgument(
         'yolo_workconfig_file',
-        default_value='/root/models/obstacle_yolov8_3cls.json',
+        default_value='/root/dev_ws/models/obstacle_yolov8.json',
         description=(
             'Path to dnn_node JSON config. Used only when '
             'enable_yolo_bridge:=true.'))

@@ -82,7 +82,11 @@ void VisualAvoidanceController::configure(
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".recovery_speed_ratio", rclcpp::ParameterValue(0.5));
   declare_parameter_if_not_declared(
+    node, plugin_name_ + ".recovery_steering_boost", rclcpp::ParameterValue(1.5));
+  declare_parameter_if_not_declared(
     node, plugin_name_ + ".near_threshold_distance", rclcpp::ParameterValue(0.6));
+  declare_parameter_if_not_declared(
+    node, plugin_name_ + ".right_turn_radius_scale", rclcpp::ParameterValue(0.8));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".enable_visual_avoidance", rclcpp::ParameterValue(true));
 
@@ -103,7 +107,9 @@ void VisualAvoidanceController::configure(
   node->get_parameter(plugin_name_ + ".path_bias_weight", path_bias_weight_);
   node->get_parameter(plugin_name_ + ".avoidance_cooldown_duration", avoidance_cooldown_duration_);
   node->get_parameter(plugin_name_ + ".recovery_speed_ratio", recovery_speed_ratio_);
+  node->get_parameter(plugin_name_ + ".recovery_steering_boost", recovery_steering_boost_);
   node->get_parameter(plugin_name_ + ".near_threshold_distance", near_threshold_distance_);
+  node->get_parameter(plugin_name_ + ".right_turn_radius_scale", right_turn_radius_scale_);
   node->get_parameter(plugin_name_ + ".enable_visual_avoidance", enable_visual_avoidance_);
 
   // 3. Subscribe to obstacle topics. PoseArray with each pose.position.{x,y}
@@ -114,6 +120,7 @@ void VisualAvoidanceController::configure(
 
   state_ = State::NORMAL;
   turn_left_ = true;
+  last_avoidance_end_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
   RCLCPP_INFO(
     node->get_logger(),
@@ -146,7 +153,7 @@ void VisualAvoidanceController::setPlan(const nav_msgs::msg::Path & path)
   RegulatedPurePursuitController::setPlan(path);
   state_ = State::NORMAL;
   recovery_start_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
-  last_avoidance_end_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+
   // Reset first-half / second-half tracking for the new plan.
   odom_distance_travelled_ = 0.0;
   pose_initialized_ = false;
@@ -224,7 +231,7 @@ ObstaclePoint VisualAvoidanceController::computeAvoidanceTargetRight(
   // Uses the same 0.8× scaling as the senior code's avoidObstacle_right.
   const double r = std::hypot(p.x, p.y);
   // Right turns use 0.8×R — tighter, matches senior avoidObstacle_right
-  const double R_use = (r < near_threshold_distance_) ? avoid_bigR_ * 0.8 : avoid_R_ * 0.8;
+  const double R_use = (r < near_threshold_distance_) ? avoid_bigR_ * right_turn_radius_scale_ : avoid_R_ * right_turn_radius_scale_;
   if (r < 1e-6) {
     return ObstaclePoint(p.x, p.y + R_use);
   }
@@ -410,6 +417,7 @@ geometry_msgs::msg::TwistStamped VisualAvoidanceController::computeVelocityComma
       auto cmd = RegulatedPurePursuitController::computeVelocityCommands(
         pose, velocity, goal_checker);
       cmd.twist.linear.x *= recovery_speed_ratio_;
+      cmd.twist.angular.z *= recovery_steering_boost_;
       return cmd;
     }
   }

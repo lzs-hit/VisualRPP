@@ -117,7 +117,9 @@ private:
   double path_bias_weight_;        // RPP path bias during AVOIDING (default 0.3)
   double avoidance_cooldown_duration_;  // cooldown after avoidance (s, default 0.5)
   double recovery_speed_ratio_;     // speed multiplier in RECOVERY (default 0.5)
+  double recovery_steering_boost_; // steering amplification during RECOVERY (default 1.5)
   double near_threshold_distance_;  // r < this uses bigR else R (default 0.6)
+  double right_turn_radius_scale_;  // right-turn radius scaling (default 0.8)
   bool   enable_visual_avoidance_;
 
   // Cached state across ticks (avoids allocation in hot path).
