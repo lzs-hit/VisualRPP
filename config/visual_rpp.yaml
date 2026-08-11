@@ -127,7 +127,7 @@ controller_server:
     VisualRPP:
       plugin: "visual_avoidance_controller::VisualAvoidanceController"
       # ===== RPP基础参数（来自rpp.yaml）=====
-      desired_linear_vel: 1.0
+      desired_linear_vel: 0.8        # [m/s] 正常巡线速度(直道)
       lookahead_dist: 0.4
       min_lookahead_dist: 0.6
       max_lookahead_dist: 1.2
@@ -138,9 +138,9 @@ controller_server:
       allow_reversing: false
       use_collision_detection: false
       max_allowed_time_to_collision_up_to_carrot: 1.0
-      regulate_linear_velocity_scaling: false
-      regulate_linear_velocity_scaling_min_radius: 0.8
-      regulate_linear_velocity_scaling_min_speed: 0.5
+      regulate_linear_velocity_scaling: false # 弯道是否自动减速
+      regulate_linear_velocity_scaling_min_radius: 0.8 # [m] 弯道半径<此值开始降速
+      regulate_linear_velocity_scaling_min_speed: 0.5 # [m/s] 弯道降速下限
       use_cost_regulated_linear_velocity_scaling: true
       cost_scaling_dist: 0.8
       cost_scaling_gain: 1.0
@@ -156,20 +156,20 @@ controller_server:
       avoidance_min_lateral_offset: 0.25
       return_line_gain_left:      3.0
       return_line_gain_right:     3.0
-      avoidance_reach_threshold:   0.15
-      avoidance_min_duration:     0.3
-      target_y_forward_offset:     0.3
-      y_threshold: 0.5
+      avoidance_reach_threshold:   0.08  # [rad] 到达target判定,越小越严格(原0.15→0.08)
+      avoidance_min_duration:     0.5   # [s] 最少避障时间(原0.3→0.5)
+      target_y_forward_offset:     0.40  # [m] target最小前移(原0.3→0.4)
+      y_threshold: 0.5  # [m] 前方检测距离,撞→↑
       offset_x_first_half: 0.0
       offset_x_second_half: 0.0
       half_transition_distance: 3.0
-      recovery_duration: 1.2
-      avoid_linear_vel: 0.4
-      max_angular_vel: 4.0
-      avoidance_steering_gain: 5.0
-      path_bias_weight: 0.6
+      recovery_duration: 1.2        # [s] 避障后回线/恢复持续时间
+      avoid_linear_vel: 0.4          # [m/s] 避障时的线速度
+      max_angular_vel: 4.0           # [rad/s] 避障时最大角速度(方向盘打幅上限)
+      avoidance_steering_gain: 5.0   # 避障P控制器增益(越大转向越猛)
+      path_bias_weight: 0.6          # 避障时朝路径拉的力度(0=纯避障 1=纯RPP)
       avoidance_cooldown_duration: 0.0
-      recovery_speed_ratio: 0.5
+      recovery_speed_ratio: 0.5      # 回线阶段速度比例(0.5=半速)
       recovery_steering_boost: 4.0
       enable_visual_avoidance: true
 
@@ -231,7 +231,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflate_unknown: true
         cost_scaling_factor: 5.0
-        inflation_radius: 0.50
+        inflation_radius: 0.30
 
       # 3. 堵门口
       exclusion_clear_layer_1:
@@ -458,13 +458,13 @@ waypoint_follower:
 velocity_smoother:
   ros__parameters:
     use_sim_time: false
-    smoothing_frequency: 50.0
+    smoothing_frequency: 50.0    # [Hz] 速度平滑频率
     scale_velocities: True
     feedback: "OPEN_LOOP"
-    max_velocity: [2.0, 0.0, 10.0]
+    max_velocity: [2.0, 0.0, 10.0]  # [m/s, -, rad/s] 速度平滑上限(线速度, -, 角速度)
     min_velocity: [-1.25, 0.0, -10.0]
-    max_accel: [5.0, 0.0, 6.28]
-    max_decel: [-2.5, 0.0, -6.28]
+    max_accel: [5.0, 0.0, 6.28]     # [m/s², -, rad/s²] 最大加速度(线, -, 角)
+    max_decel: [-2.5, 0.0, -6.28]   # [m/s², -, rad/s²] 最大减速度(线, -, 角)
     odom_topic: "/odom"
     odom_duration: 0.10
     deadband_velocity: [0.0, 0.0, 0.0]
